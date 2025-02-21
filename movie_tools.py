@@ -67,8 +67,8 @@ def mix_frames(image_families,
               reverse_at_end_of_family=["pears","text"],
               reverse_prob=0.,
               fam_start_inds = None,
-              reverse_prob_if_reverse=None,
               advance_after_fam_switch=False,
+               end_after_fam=None,
               verbose=True):
     
     """
@@ -151,10 +151,17 @@ def mix_frames(image_families,
                 print("reached end frame, count is %d"%end_at_frame_count)
                 if end_at_frame_count == end_at_frame[2]:
                     break
+
+        
         
         #decide whether to switch family
         new_im_fam = get_switch_fam(rng, switch_fam_probs,
                                     current_im_fam)
+
+        if end_after_fam is not None:
+            if current_im_fam == end_after_fam:
+                if new_im_fam != current_im_fam:
+                    break
         
         if new_im_fam != current_im_fam:
             if verbose:
@@ -322,11 +329,9 @@ def get_mono_colormap(rgb):
 def g_to_mono(im, rgb=None, colormap=None, gamma=1.):
     im_array = np.array(im)
     if "A" in im.getbands():
-        print("image has alpha channel")
         im_array = im_array[:,:,0]
         alpha = im.getchannel("A")
     else:
-        print("image doesn't have alpha channel")
         alpha = None
         
     if colormap is not None:
@@ -335,17 +340,16 @@ def g_to_mono(im, rgb=None, colormap=None, gamma=1.):
     else:
         positions = [0.,1.]
         colors = [(1,1,1),(rgb[0]/255, rgb[1]/255, rgb[2]/255)]
-        print(colors)
         cmap = LinearSegmentedColormap.from_list('custom_colormap', colors[::-1])
         cmap.set_gamma(gamma)
                                                 
         color_im_array = cmap(im_array)
         im_return = Image.fromarray((color_im_array[:, :, :3] * 255).astype(np.uint8))
-        print(im_return.size)
         if alpha is not None:
-            print(alpha.size)
             im_return.putalpha(alpha)
-        return im_return
+        return Image.fromarray((color_im_array[:, :, :3] * 255).astype(np.uint8))
+
+
 
 def color_mix_frames(frames_in, durations_in, cmap1, cmap2):
     frames_out = []
